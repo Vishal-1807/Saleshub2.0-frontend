@@ -1,0 +1,51 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "email": "manager@leadbyte.com",
+      "full_name": "Sarah Johnson",
+      "role": "campaign_manager",
+      "password": "demo123"
+    },
+    {
+      "id": "2",
+      "email": "agent1@leadbyte.com",
+      "full_name": "Mike Rodriguez",
+      "role": "field_agent",
+      "password": "demo123"
+    },
+    {
+      "id": "3",
+      "email": "agent2@leadbyte.com",
+      "full_name": "Emily Chen",
+      "role": "field_agent",
+      "password": "demo123"
+    },
+    {
+      "id": "4",
+      "email": "agent3@leadbyte.com",
+      "full_name": "James Wilson",
+      "role": "field_agent",
+      "password": "demo123"
+    },
+    {
+      "id": "5",
+      "email": "callcenter@leadbyte.com",
+      "full_name": "Lisa Anderson",
+      "role": "call_center_agent",
+      "password": "demo123"
+    },
+    {
+      "id": "6",
+      "email": "crm@leadbyte.com",
+      "full_name": "CRM System",
+      "role": "crm_system",
+      "password": "demo123"
+    }
+  ],
+  "campaigns": [],
+  "leads": [],
+  "feedback": [],
+  "activities": [],
+  "campaignAssignments": []
+}

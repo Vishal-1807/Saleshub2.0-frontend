@@ -1,0 +1,673 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Campaign, FormField } from '../types';
+import { X, Send, Eye, AlertCircle, MapPin, Loader2 } from 'lucide-react';
+import { applyRulesToFields, getInitialFieldStates } from '../lib/logicEngine';
+import { usePhoneValidation } from '../hooks/usePhoneValidation';
+import { usePostcodeValidation } from '../hooks/usePostcodeValidation';
+import { PhoneValidationIndicator } from './PhoneValidationIndicator';
+import { NameInputModal } from './NameInputModal';
+import {
+  FormValidationState,
+  createInitialValidationState,
+  updateFieldValidationState
+} from '../lib/formValidation';
+
+interface CampaignFormModalProps {
+  campaign: Campaign;
+  onClose: () => void;
+  canSubmit: boolean;
+}
+
+interface PhoneInputWithValidationProps {
+  fieldId: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  hasError: boolean;
+  onValidationChange: (fieldId: string, validationState: Partial<FormValidationState[string]>) => void;
+}
+
+function PhoneInputWithValidation({
+  fieldId,
+  value,
+  onChange,
+  disabled,
+  hasError,
+  onValidationChange
+}: PhoneInputWithValidationProps) {
+  const { validationState, validatePhone, clearValidation } = usePhoneValidation();
+
+  // Update parent component when validation state changes
+  useEffect(() => {
+    onValidationChange(fieldId, validationState);
+  }, [fieldId, validationState, onValidationChange]);
+
+  const handleChange = (newValue: string) => {
+    onChange(newValue);
+
+    // Clear validation if user modifies the number
+    if (validationState.hasBeenValidated) {
+      clearValidation();
+    }
+
+    // Trigger validation
+    validatePhone(newValue);
+  };
+
+  const showValidationError = validationState && !validationState.isValid && validationState.hasBeenValidated;
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <input
+          type="tel"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={disabled}
+          className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            hasError || showValidationError ? 'border-red-500' : 'border-slate-300'
+          } ${disabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+        />
+        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+          <PhoneValidationIndicator validationState={validationState} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface PostcodeAddressInputProps {
+  value: { postcode: string; address: string };
+  onChange: (value: { postcode: string; address: string }) => void;
+  disabled: boolean;
+  hasError: boolean;
+}
+
+function PostcodeAddressInput({
+  value,
+  onChange,
+  disabled,
+  hasError
+}: PostcodeAddressInputProps) {
+  const {
+    validationState,
+    validatePostcode,
+    selectAddress,
+    clearValidation,
+    isValidPostcode,
+    isAddressSelected,
+    validationMessage
+  } = usePostcodeValidation();
+
+  const handlePostcodeChange = (newPostcode: string) => {
+    onChange({ ...value, postcode: newPostcode, address: '' });
+
+    // Clear validation if user modifies the postcode
+    if (validationState.hasBeenValidated) {
+      clearValidation();
+    }
+
+    // Trigger validation
+    validatePostcode(newPostcode);
+  };
+
+  const handleAddressChange = (newAddress: string) => {
+    onChange({ ...value, address: newAddress });
+    selectAddress(newAddress);
+  };
+
+  const showPostcodeError = validationState && !validationState.isValid && validationState.hasBeenValidated;
+  const showAddressError = isValidPostcode && !isAddressSelected;
+
+  return (
+    <div className="space-y-3">
+      {/* Desktop Layout - Same Row */}
+      <div className="hidden md:grid md:grid-cols-12 md:gap-3">
+        {/* Postcode Input */}
+        <div className="col-span-5">
+          <label className="block text-xs font-medium text-slate-600 mb-1">Postcode</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={value.postcode}
+              onChange={(e) => handlePostcodeChange(e.target.value)}
+              disabled={disabled}
+              placeholder="Enter UK postcode (e.g., SW1A 1AA)"
+              className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                hasError || showPostcodeError ? 'border-red-500' : 'border-slate-300'
+              } ${disabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              {validationState.isValidating ? (
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              ) : isValidPostcode ? (
+                <MapPin className="w-4 h-4 text-green-500" />
+              ) : validationState.hasBeenValidated && !validationState.isValid ? (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              ) : null}
+            </div>
+          </div>
+          {validationMessage && (
+            <p className="text-xs text-red-600 mt-1">{validationMessage}</p>
+          )}
+        </div>
+
+        {/* Address Dropdown */}
+        <div className="col-span-7">
+          <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+          <select
+            value={value.address}
+            onChange={(e) => handleAddressChange(e.target.value)}
+            disabled={disabled || !isValidPostcode || validationState.addresses.length === 0}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError || showAddressError ? 'border-red-500' : 'border-slate-300'
+            } ${disabled || !isValidPostcode ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          >
+            <option value="">
+              {validationState.isValidating
+                ? 'Loading addresses...'
+                : !isValidPostcode
+                  ? 'Enter a valid postcode first'
+                  : validationState.addresses.length === 0
+                    ? 'No addresses found'
+                    : 'Select an address...'
+              }
+            </option>
+            {validationState.addresses.map((address, index) => (
+              <option key={index} value={address}>
+                {address}
+              </option>
+            ))}
+          </select>
+          {showAddressError && (
+            <p className="text-xs text-red-600 mt-1">Please select an address</p>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Layout - Vertical Stack */}
+      <div className="md:hidden space-y-3">
+        {/* Postcode Input */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Postcode</label>
+          <div className="relative">
+            <input
+              type="text"
+              value={value.postcode}
+              onChange={(e) => handlePostcodeChange(e.target.value)}
+              disabled={disabled}
+              placeholder="Enter UK postcode (e.g., SW1A 1AA)"
+              className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                hasError || showPostcodeError ? 'border-red-500' : 'border-slate-300'
+              } ${disabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              {validationState.isValidating ? (
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              ) : isValidPostcode ? (
+                <MapPin className="w-4 h-4 text-green-500" />
+              ) : validationState.hasBeenValidated && !validationState.isValid ? (
+                <AlertCircle className="w-4 h-4 text-red-500" />
+              ) : null}
+            </div>
+          </div>
+          {validationMessage && (
+            <p className="text-xs text-red-600 mt-1">{validationMessage}</p>
+          )}
+        </div>
+
+        {/* Address Dropdown */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Address</label>
+          <select
+            value={value.address}
+            onChange={(e) => handleAddressChange(e.target.value)}
+            disabled={disabled || !isValidPostcode || validationState.addresses.length === 0}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError || showAddressError ? 'border-red-500' : 'border-slate-300'
+            } ${disabled || !isValidPostcode ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          >
+            <option value="">
+              {validationState.isValidating
+                ? 'Loading addresses...'
+                : !isValidPostcode
+                  ? 'Enter a valid postcode first'
+                  : validationState.addresses.length === 0
+                    ? 'No addresses found'
+                    : 'Select an address...'
+              }
+            </option>
+            {validationState.addresses.map((address, index) => (
+              <option key={index} value={address}>
+                {address}
+              </option>
+            ))}
+          </select>
+          {showAddressError && (
+            <p className="text-xs text-red-600 mt-1">Please select an address</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CampaignFormModal({ campaign, onClose, canSubmit }: CampaignFormModalProps) {
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [phoneValidationStates, setPhoneValidationStates] = useState<FormValidationState>({});
+
+  // Initialize phone validation for all phone fields
+  const phoneFields = useMemo(() =>
+    campaign.form_fields.filter(field => field.type === 'phone'),
+    [campaign.form_fields]
+  );
+
+  // Initialize validation states for phone fields
+  useEffect(() => {
+    const initialStates: FormValidationState = {};
+    phoneFields.forEach(field => {
+      initialStates[field.id] = createInitialValidationState();
+    });
+    setPhoneValidationStates(initialStates);
+  }, [phoneFields]);
+
+  const initialFieldStates = useMemo(() => {
+    const fieldIds = campaign.form_fields
+      .filter((f) => f.type !== 'statictext')
+      .map((f) => f.id);
+    const requiredFields: Record<string, boolean> = {};
+    campaign.form_fields.forEach((f) => {
+      if (f.type !== 'statictext') {
+        requiredFields[f.id] = f.required;
+      }
+    });
+    return getInitialFieldStates(fieldIds, requiredFields);
+  }, [campaign.form_fields]);
+
+  const { fieldStates, formState } = useMemo(() => {
+    if (campaign.conditional_rules && campaign.conditional_rules.length > 0) {
+      const fieldIds = campaign.form_fields
+        .filter((f) => f.type !== 'statictext')
+        .map((f) => f.id);
+      return applyRulesToFields(
+        campaign.conditional_rules,
+        formData,
+        fieldIds,
+        initialFieldStates
+      );
+    }
+    return { fieldStates: initialFieldStates, formState: { submitDisabled: false } };
+  }, [formData, campaign.conditional_rules, campaign.form_fields, initialFieldStates]);
+
+  useEffect(() => {
+    if (campaign.conditional_rules && campaign.conditional_rules.length > 0) {
+      const updates: Record<string, any> = {};
+      let hasUpdates = false;
+
+      for (const [fieldId, state] of Object.entries(fieldStates)) {
+        if (state.value !== undefined && formData[fieldId] !== state.value) {
+          updates[fieldId] = state.value;
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        setFormData((prev) => ({
+          ...prev,
+          ...updates,
+        }));
+      }
+    }
+  }, [fieldStates, campaign.conditional_rules]);
+
+  const handlePhoneValidationChange = useCallback((fieldId: string, validationState: Partial<FormValidationState[string]>) => {
+    setPhoneValidationStates(prev =>
+      updateFieldValidationState(prev, fieldId, validationState)
+    );
+  }, []);
+
+  const validateField = (field: FormField, value: any): string | null => {
+    const fieldState = fieldStates[field.id];
+    const isRequired = fieldState ? fieldState.required : field.required;
+    const isVisible = fieldState ? fieldState.visible : true;
+
+    if (!isVisible) {
+      return null;
+    }
+
+    if (isRequired && (!value || value.toString().trim() === '')) {
+      return `${field.label} is required`;
+    }
+
+    if (field.type === 'email' && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Invalid email address';
+      }
+    }
+
+    if (field.type === 'number' && value) {
+      if (isNaN(value)) {
+        return 'Must be a valid number';
+      }
+      if (field.minValue !== undefined && parseFloat(value) < field.minValue) {
+        return `Minimum value is ${field.minValue}`;
+      }
+    }
+
+    if (field.type === 'date' && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      const minAge = new Date();
+      minAge.setFullYear(today.getFullYear() - 120); // Maximum reasonable age
+
+      if (selectedDate > today) {
+        return 'Date cannot be in the future';
+      }
+      if (selectedDate < minAge) {
+        return 'Please enter a valid date of birth';
+      }
+    }
+
+    return null;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+
+    campaign.form_fields.forEach((field) => {
+      if (field.type !== 'statictext') {
+        const error = validateField(field, formData[field.id]);
+        if (error) {
+          newErrors[field.id] = error;
+        }
+
+        // Additional validation for phone fields
+        if (field.type === 'phone') {
+          const phoneValidation = phoneValidationStates[field.id];
+          if (phoneValidation) {
+            if (phoneValidation.isValidating) {
+              newErrors[field.id] = 'Phone validation in progress';
+            } else if (phoneValidation.hasBeenValidated && !phoneValidation.isValid) {
+              newErrors[field.id] = phoneValidation.error || 'Invalid phone number';
+            } else if (formData[field.id] && !phoneValidation.hasBeenValidated) {
+              // Phone number exists but hasn't been validated yet
+              const cleanNumber = formData[field.id].replace(/\D/g, '');
+              if (cleanNumber.length === 10) {
+                newErrors[field.id] = 'Phone validation required';
+              }
+            }
+          }
+        }
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      alert(`Form submitted successfully!\n\nData: ${JSON.stringify(formData, null, 2)}`);
+      onClose();
+    }
+  };
+
+  const handleChange = (fieldId: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [fieldId]: value }));
+    if (errors[fieldId]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldId];
+        return newErrors;
+      });
+    }
+  };
+
+  const renderField = (field: FormField) => {
+    const fieldState = fieldStates[field.id];
+    const isVisible = fieldState ? fieldState.visible : true;
+    const isRequired = fieldState ? fieldState.required : field.required;
+    const isDisabled = fieldState ? fieldState.disabled : false;
+    const fieldValue = fieldState?.value !== undefined ? fieldState.value : (formData[field.id] || '');
+    const causesSubmitDisabled = fieldState?.causesSubmitDisabled || false;
+
+    if (!isVisible) {
+      return null;
+    }
+
+    if (field.type === 'statictext') {
+      return (
+        <div key={field.id} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          {field.label && <h4 className="font-semibold text-blue-900 mb-2">{field.label}</h4>}
+          <p className="text-sm text-blue-800 whitespace-pre-wrap">{field.content}</p>
+        </div>
+      );
+    }
+
+    const hasError = errors[field.id];
+
+    return (
+      <div key={field.id}>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          {field.label}
+          {isRequired && <span className="text-red-500 ml-1">*</span>}
+        </label>
+
+        {field.type === 'text' && (
+          <input
+            type="text"
+            value={fieldValue}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            disabled={!canSubmit || isDisabled}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError ? 'border-red-500' : 'border-slate-300'
+            } ${!canSubmit || isDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          />
+        )}
+
+        {field.type === 'email' && (
+          <input
+            type="email"
+            value={fieldValue}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            disabled={!canSubmit || isDisabled}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError ? 'border-red-500' : 'border-slate-300'
+            } ${!canSubmit || isDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          />
+        )}
+
+        {field.type === 'phone' && (
+          <PhoneInputWithValidation
+            fieldId={field.id}
+            value={fieldValue}
+            onChange={(value) => handleChange(field.id, value)}
+            disabled={!canSubmit || isDisabled}
+            hasError={!!hasError}
+            onValidationChange={handlePhoneValidationChange}
+          />
+        )}
+
+        {field.type === 'textarea' && (
+          <textarea
+            value={fieldValue}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            disabled={!canSubmit}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 ${
+              hasError ? 'border-red-500' : 'border-slate-300'
+            } ${!canSubmit ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          />
+        )}
+
+        {field.type === 'number' && (
+          <input
+            type="number"
+            value={fieldValue}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            min={field.minValue}
+            disabled={!canSubmit || isDisabled}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError ? 'border-red-500' : 'border-slate-300'
+            } ${!canSubmit || isDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          />
+        )}
+
+        {field.type === 'yesno' && (
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                value="yes"
+                checked={fieldValue === 'yes'}
+                onChange={(e) => handleChange(field.id, e.target.value)}
+                disabled={!canSubmit || isDisabled}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Yes</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name={field.id}
+                value="no"
+                checked={fieldValue === 'no'}
+                onChange={(e) => handleChange(field.id, e.target.value)}
+                disabled={!canSubmit || isDisabled}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">No</span>
+            </label>
+          </div>
+        )}
+
+        {field.type === 'multiplechoice' && field.options && (
+          <div className="space-y-2">
+            {field.options.map((option, index) => (
+              <label key={index} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name={field.id}
+                  value={option}
+                  checked={fieldValue === option}
+                  onChange={(e) => handleChange(field.id, e.target.value)}
+                  disabled={!canSubmit}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">{option}</span>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {field.type === 'checkbox' && (
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={fieldValue || false}
+              onChange={(e) => handleChange(field.id, e.target.checked)}
+              disabled={!canSubmit || isDisabled}
+              className="w-4 h-4 rounded"
+            />
+            <span className="text-sm">I agree to the terms and conditions</span>
+          </label>
+        )}
+
+        {field.type === 'date' && (
+          <input
+            type="date"
+            value={fieldValue || ''}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            disabled={!canSubmit || isDisabled}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              hasError ? 'border-red-500' : 'border-slate-300'
+            } ${!canSubmit || isDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+          />
+        )}
+
+        {field.type === 'postcode_address' && (
+          <PostcodeAddressInput
+            value={fieldValue || { postcode: '', address: '' }}
+            onChange={(value) => handleChange(field.id, value)}
+            disabled={!canSubmit || isDisabled}
+            hasError={!!hasError}
+          />
+        )}
+
+        {field.type === 'name' && (
+          <NameInputModal
+            value={fieldValue || { title: '', firstName: '', lastName: '' }}
+            onChange={(value) => handleChange(field.id, value)}
+            disabled={!canSubmit || isDisabled}
+            hasError={!!hasError}
+          />
+        )}
+
+        {hasError && <p className="mt-1 text-sm text-red-600">{errors[field.id]}</p>}
+        {canSubmit && causesSubmitDisabled && formState.submitDisabled && (
+          <div className="mt-2 flex items-center gap-2 text-red-600">
+            <AlertCircle className="w-4 h-4" />
+            <p className="text-sm">Form can't be submitted</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="bg-white border-b border-slate-200 p-6 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">{campaign.title}</h2>
+            <p className="text-sm text-slate-600 mt-1">{campaign.description}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {!canSubmit && (
+          <div className="bg-amber-50 border-b border-amber-200 p-4 flex items-center gap-3 flex-shrink-0">
+            <Eye className="w-5 h-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-medium text-amber-900">View-Only Mode</p>
+              <p className="text-xs text-amber-700">You do not have permission to submit this form.</p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-6">
+            {campaign.form_fields.map((field) => renderField(field))}
+          </div>
+
+          {canSubmit && (
+            <div className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={formState.submitDisabled}
+                className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+                  formState.submitDisabled
+                    ? 'bg-slate-400 text-slate-200 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/50'
+                }`}
+              >
+                <Send className="w-4 h-4" />
+                Submit Form
+              </button>
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
