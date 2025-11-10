@@ -4,6 +4,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { sampleUsers } from '../lib/sampleData';
 import { Campaign, FormField } from '../types';
 import { FormFieldConfigurator } from '../components/FormFieldConfigurator';
+import { DraggableFormFieldList } from '../components/DraggableFormFieldList';
 import { CampaignFormView } from '../components/CampaignFormView';
 import { CampaignPreviewModal } from '../components/CampaignPreviewModal';
 import { ConditionalLogicBuilder } from '../components/ConditionalLogicBuilder';
@@ -19,7 +20,6 @@ import {
   CheckCircle,
   X,
   Calendar,
-  Target,
   Trash2,
   Briefcase,
   Eye,
@@ -159,10 +159,6 @@ export default function Campaigns() {
 
               <div className="space-y-3 mb-4">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Target className="w-4 h-4" />
-                  <span>{campaign.target_type || 'General'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Calendar className="w-4 h-4" />
                   <span>
                     {new Date(campaign.start_date).toLocaleDateString()} -{' '}
@@ -248,22 +244,18 @@ function CreateCampaignModal({
       return {
         title: editingCampaign.title,
         description: editingCampaign.description,
-        target_type: editingCampaign.target_type,
         start_date: editingCampaign.start_date.split('T')[0],
         end_date: editingCampaign.end_date.split('T')[0],
         status: editingCampaign.status,
-        company_name: '',
         custom_message: customMessageField?.content || '',
       };
     }
     return {
       title: '',
       description: '',
-      target_type: '',
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       status: 'active' as 'active' | 'paused' | 'completed',
-      company_name: '',
       custom_message: '',
     };
   };
@@ -276,8 +268,7 @@ function CreateCampaignModal({
       { id: '1', label: 'Name', type: 'name', required: true },
       { id: '2', label: 'Email', type: 'email', required: true },
       { id: '3', label: 'Phone', type: 'phone', required: true },
-      { id: '4', label: 'Company Name', type: 'text', required: true },
-      { id: '5', label: 'Custom Message', type: 'textarea', required: false },
+      { id: '4', label: 'Custom Message', type: 'textarea', required: false },
     ] as FormField[];
   };
 
@@ -316,6 +307,10 @@ function CreateCampaignModal({
 
   const removeFormField = (id: string) => {
     setFormFields(formFields.filter((f) => f.id !== id));
+  };
+
+  const reorderFormFields = (newFields: FormField[]) => {
+    setFormFields(newFields);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -468,28 +463,7 @@ function CreateCampaignModal({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Company Name</label>
-              <input
-                type="text"
-                value={formData.company_name}
-                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                placeholder="Your company name"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Target Type</label>
-              <input
-                type="text"
-                value={formData.target_type}
-                onChange={(e) => setFormData({ ...formData, target_type: e.target.value })}
-                placeholder="e.g., SMB, Enterprise, Healthcare"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-2">Custom Message</label>
@@ -542,26 +516,24 @@ function CreateCampaignModal({
               <h3 className="text-lg font-semibold text-slate-900">Custom Form Fields</h3>
             </div>
 
-            <div className="space-y-3">
-              {formFields.map((field) => (
-                <FormFieldConfigurator
-                  key={field.id}
-                  field={field}
-                  onUpdate={(updates) => updateFormField(field.id, updates)}
-                  onRemove={() => removeFormField(field.id)}
-                  fieldTypes={fieldTypes}
-                />
-              ))}
+            <DraggableFormFieldList
+              formFields={formFields}
+              onReorder={reorderFormFields}
+              onUpdateField={updateFormField}
+              onRemoveField={removeFormField}
+              fieldTypes={fieldTypes}
+            />
 
-              <button
-                type="button"
-                onClick={addFormField}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-4"
-              >
-                <Plus className="w-4 h-4" />
-                Add Field
-              </button>
+            <button
+              type="button"
+              onClick={addFormField}
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm mb-4 mt-4"
+            >
+              <Plus className="w-4 h-4" />
+              Add Field
+            </button>
 
+            <div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
                 <input
                   type="text"

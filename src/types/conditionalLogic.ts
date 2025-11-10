@@ -18,7 +18,9 @@ export type ActionType =
   | 'enableField'
   | 'setContent'
   | 'disableSubmit'
-  | 'enableSubmit';
+  | 'enableSubmit'
+  | 'disableAddressFields'
+  | 'enableAddressFields';
 
 export type LogicOperator = 'AND' | 'OR';
 
@@ -34,6 +36,7 @@ export interface Action {
   type: ActionType;
   field: string;
   value?: string;
+  errorMessage?: string; // Custom error message for disableSubmit actions
 }
 
 export interface Rule {

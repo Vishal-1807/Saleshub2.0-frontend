@@ -125,7 +125,7 @@ class AddressLookupService {
       
       // Validate response structure
       if (!data.Addresses || !Array.isArray(data.Addresses)) {
-        throw new Error('Invalid API response format');
+        throw new Error('Enter a valid pincode');
       }
 
       return {

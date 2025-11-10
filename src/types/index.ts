@@ -23,11 +23,18 @@ export interface NameFieldValue {
   lastName: string;
 }
 
+export interface PostcodeAddressFieldValue {
+  postcode: string;
+  address: string;
+  address1: string;
+  address2: string;
+  city: string;
+}
+
 export interface Campaign {
   id: string;
   title: string;
   description: string;
-  target_type: string;
   status: 'active' | 'paused' | 'completed';
   start_date: string;
   end_date: string;

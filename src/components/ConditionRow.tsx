@@ -27,7 +27,8 @@ export function ConditionRow({ condition, fields, onUpdate, onRemove, showRemove
     selectedField ? op.types.includes(selectedField.type) : true
   );
 
-  const needsValueInput = !['is_empty', 'is_not_empty'].includes(condition.operator);
+  const isAddressField = selectedField?.type === 'postcode_address';
+  const needsValueInput = !isAddressField && !['is_empty', 'is_not_empty'].includes(condition.operator);
 
   const renderValueInput = () => {
     if (!needsValueInput) return null;
@@ -129,7 +130,15 @@ export function ConditionRow({ condition, fields, onUpdate, onRemove, showRemove
 
       <select
         value={condition.field}
-        onChange={(e) => onUpdate({ field: e.target.value, value: '' })}
+        onChange={(e) => {
+          const selectedFieldType = fields.find(f => f.id === e.target.value)?.type;
+          if (selectedFieldType === 'postcode_address') {
+            // For address fields, automatically set operator and value
+            onUpdate({ field: e.target.value, operator: 'is_not_empty', value: 'true' });
+          } else {
+            onUpdate({ field: e.target.value, value: '' });
+          }
+        }}
         className={`flex-1 min-w-0 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
           !condition.field ? 'border-red-300 bg-red-50' : 'border-slate-300'
         }`}
@@ -142,35 +151,45 @@ export function ConditionRow({ condition, fields, onUpdate, onRemove, showRemove
         ))}
       </select>
 
-      <select
-        value={condition.operator}
-        onChange={(e) => onUpdate({ operator: e.target.value as FieldOperator })}
-        className={`flex-1 min-w-0 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-          !condition.operator ? 'border-red-300 bg-red-50' : 'border-slate-300'
-        }`}
-        disabled={!condition.field}
-      >
-        <option value="">Select operator...</option>
-        {availableOperators.map((op) => (
-          <option key={op.value} value={op.value}>
-            {op.label}
-          </option>
-        ))}
-      </select>
-
-      <div className="flex items-center gap-2 flex-1">
-        {needsValueInput && renderValueInput()}
-        {showRemove && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-            title="Remove condition"
+      {/* For address fields, show a simple description instead of operator/value */}
+      {isAddressField ? (
+        <div className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-sm text-slate-600">
+          address is selected
+        </div>
+      ) : (
+        <>
+          <select
+            value={condition.operator}
+            onChange={(e) => onUpdate({ operator: e.target.value as FieldOperator })}
+            className={`flex-1 min-w-0 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
+              !condition.operator ? 'border-red-300 bg-red-50' : 'border-slate-300'
+            }`}
+            disabled={!condition.field}
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+            <option value="">Select operator...</option>
+            {availableOperators.map((op) => (
+              <option key={op.value} value={op.value}>
+                {op.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center gap-2 flex-1">
+            {needsValueInput && renderValueInput()}
+          </div>
+        </>
+      )}
+
+      {showRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+          title="Remove condition"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }

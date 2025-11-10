@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Campaign, FormField } from '../types';
+import { Campaign, FormField, NameFieldValue, PostcodeAddressFieldValue } from '../types';
 import { ArrowLeft, Send, Eye, AlertCircle, MapPin, Loader2 } from 'lucide-react';
 import { applyRulesToFields, getInitialFieldStates } from '../lib/logicEngine';
 import { usePhoneValidation } from '../hooks/usePhoneValidation';
@@ -77,17 +77,19 @@ function PhoneInputWithValidation({
 }
 
 interface PostcodeAddressInputProps {
-  value: { postcode: string; address: string };
-  onChange: (value: { postcode: string; address: string }) => void;
+  value: PostcodeAddressFieldValue;
+  onChange: (value: PostcodeAddressFieldValue) => void;
   disabled: boolean;
   hasError: string | undefined;
+  addressFieldsDisabled?: boolean;
 }
 
 function PostcodeAddressInput({
   value,
   onChange,
   disabled,
-  hasError
+  hasError,
+  addressFieldsDisabled = false
 }: PostcodeAddressInputProps) {
   const {
     validationState,
@@ -100,7 +102,7 @@ function PostcodeAddressInput({
   } = usePostcodeValidation();
 
   const handlePostcodeChange = (newPostcode: string) => {
-    onChange({ ...value, postcode: newPostcode, address: '' });
+    onChange({ ...value, postcode: newPostcode, address: '', address1: '', address2: '', city: '' });
 
     // Clear validation if user modifies the postcode
     if (validationState.hasBeenValidated) {
@@ -111,9 +113,39 @@ function PostcodeAddressInput({
     validatePostcode(newPostcode);
   };
 
+  // Parse address from dropdown format: "Comedy Knights, Leicester Square, , , , London, Greater London"
+  const parseAddressFromDropdown = (addressString: string) => {
+    const parts = addressString.split(',').map(part => part.trim());
+    return {
+      address1: parts[0] || '',
+      address2: parts[1] || '',
+      city: parts[5] || '', // 6th entry (0-indexed)
+    };
+  };
+
   const handleAddressChange = (newAddress: string) => {
-    onChange({ ...value, address: newAddress });
+    const parsedAddress = parseAddressFromDropdown(newAddress);
+    // Auto-population always works regardless of editability rules
+    onChange({
+      ...value,
+      address: newAddress,
+      address1: parsedAddress.address1,
+      address2: parsedAddress.address2,
+      city: parsedAddress.city
+    });
     selectAddress(newAddress);
+  };
+
+  const handleAddress1Change = (newAddress1: string) => {
+    onChange({ ...value, address1: newAddress1 });
+  };
+
+  const handleAddress2Change = (newAddress2: string) => {
+    onChange({ ...value, address2: newAddress2 });
+  };
+
+  const handleCityChange = (newCity: string) => {
+    onChange({ ...value, city: newCity });
   };
 
   const showPostcodeError = validationState && !validationState.isValid && validationState.hasBeenValidated;
@@ -185,6 +217,56 @@ function PostcodeAddressInput({
         </div>
       </div>
 
+      {/* Additional Address Fields - Desktop Layout */}
+      {isAddressSelected && (
+        <div className="hidden md:grid md:grid-cols-12 md:gap-4 mt-4">
+          {/* Address 1 */}
+          <div className="col-span-4">
+            <label className="block text-xs font-medium text-slate-600 mb-2">Address 1</label>
+            <input
+              type="text"
+              value={value.address1}
+              onChange={(e) => handleAddress1Change(e.target.value)}
+              disabled={disabled || addressFieldsDisabled}
+              placeholder="Address line 1"
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                hasError ? 'border-red-500' : 'border-slate-300'
+              } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+            />
+          </div>
+
+          {/* Address 2 */}
+          <div className="col-span-4">
+            <label className="block text-xs font-medium text-slate-600 mb-2">Address 2</label>
+            <input
+              type="text"
+              value={value.address2}
+              onChange={(e) => handleAddress2Change(e.target.value)}
+              disabled={disabled || addressFieldsDisabled}
+              placeholder="Address line 2"
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                hasError ? 'border-red-500' : 'border-slate-300'
+              } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+            />
+          </div>
+
+          {/* City */}
+          <div className="col-span-4">
+            <label className="block text-xs font-medium text-slate-600 mb-2">City</label>
+            <input
+              type="text"
+              value={value.city}
+              onChange={(e) => handleCityChange(e.target.value)}
+              disabled={disabled || addressFieldsDisabled}
+              placeholder="City"
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                hasError ? 'border-red-500' : 'border-slate-300'
+              } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Mobile Layout - Vertical Stack */}
       <div className="md:hidden space-y-4">
         {/* Postcode Input */}
@@ -247,6 +329,56 @@ function PostcodeAddressInput({
             <p className="text-xs text-red-600 mt-1">Please select an address</p>
           )}
         </div>
+
+        {/* Additional Address Fields - Mobile Layout */}
+        {isAddressSelected && (
+          <>
+            {/* Address 1 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-2">Address 1</label>
+              <input
+                type="text"
+                value={value.address1}
+                onChange={(e) => handleAddress1Change(e.target.value)}
+                disabled={disabled || addressFieldsDisabled}
+                placeholder="Address line 1"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                  hasError ? 'border-red-500' : 'border-slate-300'
+                } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+              />
+            </div>
+
+            {/* Address 2 */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-2">Address 2</label>
+              <input
+                type="text"
+                value={value.address2}
+                onChange={(e) => handleAddress2Change(e.target.value)}
+                disabled={disabled || addressFieldsDisabled}
+                placeholder="Address line 2"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                  hasError ? 'border-red-500' : 'border-slate-300'
+                } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+              />
+            </div>
+
+            {/* City */}
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-2">City</label>
+              <input
+                type="text"
+                value={value.city}
+                onChange={(e) => handleCityChange(e.target.value)}
+                disabled={disabled || addressFieldsDisabled}
+                placeholder="City"
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                  hasError ? 'border-red-500' : 'border-slate-300'
+                } ${disabled || addressFieldsDisabled ? 'bg-slate-100 cursor-not-allowed' : ''}`}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -612,10 +744,11 @@ export function CampaignFormView({ campaign, onBack, canSubmit }: CampaignFormVi
 
         {field.type === 'postcode_address' && (
           <PostcodeAddressInput
-            value={fieldValue || { postcode: '', address: '' }}
+            value={fieldValue || { postcode: '', address: '', address1: '', address2: '', city: '' }}
             onChange={(value) => handleChange(field.id, value)}
             disabled={isDisabled}
             hasError={hasError}
+            addressFieldsDisabled={state?.addressFieldsDisabled}
           />
         )}
 
@@ -632,7 +765,7 @@ export function CampaignFormView({ campaign, onBack, canSubmit }: CampaignFormVi
         {canSubmit && causesSubmitDisabled && formState.submitDisabled && (
           <div className="mt-2 flex items-center gap-2 text-red-600">
             <AlertCircle className="w-4 h-4" />
-            <p className="text-sm">Form can't be submitted</p>
+            <p className="text-sm">{state?.submitDisabledMessage || "Form can't be submitted"}</p>
           </div>
         )}
       </div>

@@ -8,6 +8,8 @@ export interface FieldState {
   content?: string;
   initialContent?: string;
   causesSubmitDisabled?: boolean;
+  addressFieldsDisabled?: boolean;
+  submitDisabledMessage?: string; // Custom error message for this field when it causes submit to be disabled
 }
 
 export interface FormState {
@@ -23,6 +25,27 @@ export function evaluateCondition(
 ): boolean {
   const fieldValue = formData[condition.field];
   const conditionValue = condition.value;
+
+  // Special handling for postcode_address fields
+  // For address fields, we check if an address has been selected
+  if (fieldValue && typeof fieldValue === 'object' && 'address' in fieldValue) {
+    switch (condition.operator) {
+      case 'is_not_empty':
+        return !!fieldValue.address && fieldValue.address !== '';
+      case 'is_empty':
+        return !fieldValue.address || fieldValue.address === '';
+      case 'equals':
+        return fieldValue.address === conditionValue;
+      case 'not_equals':
+        return fieldValue.address !== conditionValue;
+      case 'contains':
+        return !!fieldValue.address && String(fieldValue.address).toLowerCase().includes(String(conditionValue).toLowerCase());
+      case 'not_contains':
+        return !fieldValue.address || !String(fieldValue.address).toLowerCase().includes(String(conditionValue).toLowerCase());
+      default:
+        return false;
+    }
+  }
 
   switch (condition.operator) {
     case 'equals':
@@ -88,7 +111,7 @@ export function applyRulesToFields(
   const formState: FormState = { submitDisabled: false, submitDisabledByFields: [] };
 
   for (const fieldId of fieldIds) {
-    fieldStates[fieldId] = { ...initialStates[fieldId], causesSubmitDisabled: false };
+    fieldStates[fieldId] = { ...initialStates[fieldId], causesSubmitDisabled: false, submitDisabledMessage: undefined };
   }
 
   const affectedFieldsByAction: Record<string, Set<string>> = {
@@ -100,6 +123,8 @@ export function applyRulesToFields(
     optionalField: new Set(),
     disableField: new Set(),
     enableField: new Set(),
+    disableAddressFields: new Set(),
+    enableAddressFields: new Set(),
     disableSubmit: new Set(),
     enableSubmit: new Set(),
   };
@@ -117,9 +142,14 @@ export function applyRulesToFields(
           .map(condition => condition.field)
           .filter(field => field && fieldIds.includes(field));
 
+        // Find the disableSubmit action to get the custom error message
+        const disableSubmitAction = rule.actions.find(action => action.type === 'disableSubmit');
+        const customErrorMessage = disableSubmitAction?.errorMessage?.trim() || "Form can't be submitted";
+
         for (const fieldId of fieldsInConditions) {
           if (fieldStates[fieldId]) {
             fieldStates[fieldId].causesSubmitDisabled = true;
+            fieldStates[fieldId].submitDisabledMessage = customErrorMessage;
           }
           if (!formState.submitDisabledByFields!.includes(fieldId)) {
             formState.submitDisabledByFields!.push(fieldId);
@@ -142,6 +172,8 @@ export function applyRulesToFields(
               required: false,
               disabled: false,
               causesSubmitDisabled: false,
+              addressFieldsDisabled: false,
+              submitDisabledMessage: undefined,
             };
           }
 
@@ -179,6 +211,14 @@ export function applyRulesToFields(
             fieldStates[action.field].disabled = false;
             break;
 
+          case 'disableAddressFields':
+            fieldStates[action.field].addressFieldsDisabled = true;
+            break;
+
+          case 'enableAddressFields':
+            fieldStates[action.field].addressFieldsDisabled = false;
+            break;
+
           case 'setContent':
             if (action.value !== undefined) {
               fieldStates[action.field].content = action.value;
@@ -211,6 +251,8 @@ export function getInitialFieldStates(
       visible: true,
       required: requiredFields[fieldId] || false,
       disabled: false,
+      addressFieldsDisabled: false,
+      submitDisabledMessage: undefined,
     };
   }
 

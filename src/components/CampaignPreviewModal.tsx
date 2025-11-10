@@ -1,5 +1,5 @@
 import { Campaign, FormField } from '../lib/sampleData';
-import { X, FileText, Calendar, Target, Users, CheckCircle, Zap } from 'lucide-react';
+import { X, FileText, Calendar, Users, CheckCircle, Zap } from 'lucide-react';
 import { Rule } from '../types/conditionalLogic';
 
 interface CampaignPreviewModalProps {
@@ -263,18 +263,7 @@ export function CampaignPreviewModal({
               <h3 className="text-2xl font-bold text-slate-900 mb-2">{campaign.title}</h3>
               <p className="text-slate-600 mb-4">{campaign.description}</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Target className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase font-medium">Target</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {campaign.target_type || 'Not specified'}
-                    </p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">

@@ -19,14 +19,32 @@ const ACTION_TYPES: { value: ActionType; label: string }[] = [
   { value: 'setContent', label: 'Change text to' },
   { value: 'disableField', label: 'Disable field' },
   { value: 'enableField', label: 'Enable field' },
+  { value: 'disableAddressFields', label: 'Disable address fields (Address 1, Address 2, City)' },
+  { value: 'enableAddressFields', label: 'Enable address fields (Address 1, Address 2, City)' },
   { value: 'disableSubmit', label: 'Disable submit button' },
   { value: 'enableSubmit', label: 'Enable submit button' },
 ];
 
 export function ActionRow({ action, fields, onUpdate, onRemove, showRemove }: ActionRowProps) {
   const needsValueInput = action.type === 'setValue' || action.type === 'setContent';
-  const needsFieldSelection = action.type !== 'disableSubmit' && action.type !== 'enableSubmit';
+  const needsErrorMessageInput = action.type === 'disableSubmit';
+  const isAddressFieldAction = action.type === 'disableAddressFields' || action.type === 'enableAddressFields';
+  const needsFieldSelection = action.type !== 'disableSubmit' && action.type !== 'enableSubmit' && !isAddressFieldAction;
   const selectedField = fields.find((f) => f.id === action.field);
+
+  const renderErrorMessageInput = () => {
+    if (!needsErrorMessageInput) return null;
+
+    return (
+      <input
+        type="text"
+        value={action.errorMessage || ''}
+        onChange={(e) => onUpdate({ errorMessage: e.target.value })}
+        placeholder="Enter custom error message (optional)"
+        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+      />
+    );
+  };
 
   const renderValueInput = () => {
     if (!needsValueInput || !selectedField) return null;
@@ -125,6 +143,13 @@ export function ActionRow({ action, fields, onUpdate, onRemove, showRemove }: Ac
           if (newType === 'disableSubmit' || newType === 'enableSubmit') {
             updates.field = 'submit';
           }
+          // For address field actions, automatically set to the first postcode_address field
+          if (newType === 'disableAddressFields' || newType === 'enableAddressFields') {
+            const addressField = fields.find(f => f.type === 'postcode_address');
+            if (addressField) {
+              updates.field = addressField.id;
+            }
+          }
           onUpdate(updates);
         }}
         className={`flex-1 min-w-0 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
@@ -161,6 +186,10 @@ export function ActionRow({ action, fields, onUpdate, onRemove, showRemove }: Ac
             </option>
           ))}
         </select>
+      ) : isAddressFieldAction ? (
+        <div className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-sm text-slate-600">
+          {selectedField ? `${selectedField.label} (Address 1, Address 2, City)` : 'Address Fields'}
+        </div>
       ) : (
         <div className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-sm text-slate-500">
           Submit Button
@@ -169,6 +198,7 @@ export function ActionRow({ action, fields, onUpdate, onRemove, showRemove }: Ac
 
       <div className="flex items-center gap-2 flex-1">
         {needsValueInput && renderValueInput()}
+        {needsErrorMessageInput && renderErrorMessageInput()}
         {showRemove && (
           <button
             type="button"
