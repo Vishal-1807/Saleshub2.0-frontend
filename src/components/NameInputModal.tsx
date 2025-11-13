@@ -23,6 +23,7 @@ const titleOptions = [
 ];
 
 export function NameInputModal({ value, onChange, disabled = false, hasError = false }: NameInputModalProps) {
+  console.log('🔄 NameInputModal rendering');
   const handleTitleChange = (title: string) => {
     onChange({ ...value, title });
   };

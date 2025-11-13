@@ -5,12 +5,14 @@ import { navigationConfig, roleConfig } from '../config/permissions';
 import {
   LayoutDashboard,
   Users,
+  Users2,
   Briefcase,
   LogOut,
   Menu,
   TrendingUp,
   Database,
-  ChevronRight
+  ChevronRight,
+  UserCheck
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -22,12 +24,16 @@ interface LayoutProps {
 const iconMap = {
   LayoutDashboard,
   Users,
+  Users2,
   Briefcase,
   TrendingUp,
   Database,
+  UserCheck,
 };
 
 export default function Layout({ children, currentPage, onNavigate }: LayoutProps) {
+  console.log('🔄 Layout component rendering');
+
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,8 +44,8 @@ export default function Layout({ children, currentPage, onNavigate }: LayoutProp
     dispatch(logoutUser());
   };
 
-  const navigation = navigationConfig[user.role];
-  const roleInfo = roleConfig[user.role];
+  const navigation = navigationConfig[user.role] || [];
+  const roleInfo = roleConfig[user.role] || { label: 'Unknown Role', description: 'Role not configured' };
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 flex overflow-hidden">

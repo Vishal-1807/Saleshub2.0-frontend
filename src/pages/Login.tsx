@@ -4,6 +4,8 @@ import { loginUser, clearError } from '../store/slices/authSlice';
 import { UserCircle, Lock, Database } from 'lucide-react';
 
 export default function Login() {
+  console.log('🔄 Login page rendering');
+
   const dispatch = useAppDispatch();
   const { isLoading, error } = useAppSelector((state) => state.auth);
   const [email, setEmail] = useState('');
@@ -75,9 +77,11 @@ export default function Login() {
             <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
               <p className="text-xs text-blue-200 font-semibold mb-2">Demo Accounts:</p>
               <div className="space-y-1 text-xs text-blue-300/80">
-                <p>Campaign Manager: manager@leadbyte.com</p>
-                <p>Field Agent: agent1@leadbyte.com</p>
-                <p>Call Center: callcenter@leadbyte.com</p>
+                <p>Super Admin: superadmin@saleshub.com</p>
+                <p>Tenant Admin: tenantadmin@leadbyte.com</p>
+                <p>Admin: admin@leadbyte.com</p>
+                <p>Manager: manager@leadbyte.com</p>
+                <p>Agent: agent1@leadbyte.com</p>
                 <p className="mt-2 text-blue-400 font-medium">Password: demo123</p>
               </div>
             </div>

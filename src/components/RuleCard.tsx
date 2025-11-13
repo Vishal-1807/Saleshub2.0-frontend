@@ -14,6 +14,7 @@ interface RuleCardProps {
 }
 
 export function RuleCard({ rule, ruleIndex, fields, onUpdate, onRemove }: RuleCardProps) {
+  console.log('🔄 RuleCard rendering');
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const addCondition = () => {

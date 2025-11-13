@@ -19,11 +19,13 @@ const initialState: AuthState = {
 export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
+    console.log('🔄 Redux: loginUser thunk executing');
     const user = await authService.login(email, password);
     if (!user) {
       return rejectWithValue('Invalid email or password');
     }
     await authService.setCurrentUser(user);
+    console.log('✅ Redux: loginUser successful', user);
     return user;
   }
 );
@@ -31,14 +33,19 @@ export const loginUser = createAsyncThunk(
 export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async () => {
-    return await authService.getCurrentUser();
+    console.log('🔄 Redux: checkAuth thunk executing');
+    const user = await authService.getCurrentUser();
+    console.log('✅ Redux: checkAuth result', user);
+    return user;
   }
 );
 
 export const logoutUser = createAsyncThunk(
   'auth/logout',
   async () => {
+    console.log('🔄 Redux: logoutUser thunk executing');
     await authService.logout();
+    console.log('✅ Redux: logoutUser completed');
   }
 );
 
@@ -47,16 +54,19 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearError: (state) => {
+      console.log('🔄 Redux: clearError action');
       state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(loginUser.pending, (state) => {
+        console.log('🔄 Redux: loginUser.pending');
         state.isLoading = true;
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
+        console.log('✅ Redux: loginUser.fulfilled', action.payload);
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload;

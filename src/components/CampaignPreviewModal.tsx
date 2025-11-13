@@ -17,6 +17,7 @@ export function CampaignPreviewModal({
   onClose,
   onConfirm
 }: CampaignPreviewModalProps) {
+  console.log('🔄 CampaignPreviewModal rendering');
   const renderFieldPreview = (field: FormField) => {
     if (field.type === 'statictext') {
       return (

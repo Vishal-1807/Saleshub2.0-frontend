@@ -15,6 +15,7 @@ export function FormFieldConfigurator({
   onRemove,
   fieldTypes,
 }: FormFieldConfiguratorProps) {
+  console.log('🔄 FormFieldConfigurator rendering');
   const [expanded, setExpanded] = useState(false);
 
   const addOption = () => {

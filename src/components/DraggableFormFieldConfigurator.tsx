@@ -20,6 +20,7 @@ export function DraggableFormFieldConfigurator({
   fieldTypes,
   isDragging = false,
 }: DraggableFormFieldConfiguratorProps) {
+  console.log('🔄 DraggableFormFieldConfigurator rendering');
   const [expanded, setExpanded] = useState(false);
   
   const {

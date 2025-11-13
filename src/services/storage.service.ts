@@ -1,4 +1,5 @@
 import { Database } from '../types';
+import { rolePermissions } from '../config/permissions';
 import initialData from '../data/database.json';
 
 const STORAGE_KEY = 'leadbyte_database';
@@ -35,6 +36,159 @@ class StorageService {
 
   getUserByEmail(email: string) {
     return this.getDatabase().users.find(u => u.email === email);
+  }
+
+  createUser(user: any) {
+    const db = this.updateDatabase(db => ({
+      ...db,
+      users: [...db.users, user]
+    }));
+    return user;
+  }
+
+  updateUser(id: string, updates: Partial<any>) {
+    this.updateDatabase(db => ({
+      ...db,
+      users: db.users.map(u =>
+        u.id === id ? { ...u, ...updates } : u
+      )
+    }));
+  }
+
+  deleteUser(id: string) {
+    this.updateDatabase(db => ({
+      ...db,
+      users: db.users.filter(u => u.id !== id)
+    }));
+  }
+
+  // Hierarchical user management methods
+  getUsersByRole(role: string) {
+    return this.getDatabase().users.filter(u => u.role === role);
+  }
+
+  getUsersByTenant(tenantId: string) {
+    return this.getDatabase().users.filter(u => u.tenant_id === tenantId);
+  }
+
+  getUsersByParent(parentId: string) {
+    return this.getDatabase().users.filter(u => u.parent_id === parentId);
+  }
+
+  getUsersUnderHierarchy(userId: string): any[] {
+    const allUsers = this.getDatabase().users;
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return [];
+
+    const result: any[] = [];
+
+    // Get direct children
+    const directChildren = allUsers.filter(u => u.parent_id === userId);
+    result.push(...directChildren);
+
+    // Recursively get children of children
+    directChildren.forEach(child => {
+      result.push(...this.getUsersUnderHierarchy(child.id));
+    });
+
+    return result;
+  }
+
+  getUserHierarchy(userId: string): any {
+    const allUsers = this.getDatabase().users;
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return null;
+
+    const children = allUsers
+      .filter(u => u.parent_id === userId)
+      .map(child => this.getUserHierarchy(child.id))
+      .filter(Boolean);
+
+    return {
+      user,
+      children,
+      level: this.getUserLevel(user.role)
+    };
+  }
+
+  private getUserLevel(role: string): number {
+    const levels = {
+      'super_admin': 0,
+      'tenant_admin': 1,
+      'admin': 2,
+      'manager': 3,
+      'agent': 4
+    };
+    return levels[role as keyof typeof levels] || 4;
+  }
+
+  getVisibleUsers(currentUser: any): any[] {
+    const allUsers = this.getDatabase().users;
+
+    switch (currentUser.role) {
+      case 'super_admin':
+        return allUsers; // Can see everyone
+
+      case 'tenant_admin':
+        // Can see all users in their tenant (admins, managers, agents) but not super admins
+        return allUsers.filter(u =>
+          u.tenant_id === currentUser.tenant_id && u.role !== 'super_admin'
+        );
+
+      case 'admin':
+        // Can see themselves, managers under them, and agents under those managers
+        const usersUnderAdmin = this.getUsersUnderHierarchy(currentUser.id);
+        return allUsers.filter(u =>
+          u.tenant_id === currentUser.tenant_id &&
+          u.role !== 'super_admin' &&
+          u.role !== 'tenant_admin' &&
+          (u.id === currentUser.id || usersUnderAdmin.some(child => child.id === u.id))
+        );
+
+      case 'manager':
+        // Can see their agents only
+        const usersUnderManager = this.getUsersUnderHierarchy(currentUser.id);
+        return [currentUser, ...usersUnderManager];
+
+      case 'agent':
+        return [currentUser]; // Can only see themselves
+
+      default:
+        return [currentUser];
+    }
+  }
+
+  getCreatableRoles(currentUser: any): string[] {
+    const userPermissions = rolePermissions[currentUser.role];
+    const creation = userPermissions?.creation;
+
+    if (!creation) return [];
+
+    const creatableRoles: string[] = [];
+
+    if (creation.createAgents) creatableRoles.push('agent');
+    if (creation.createManagers) creatableRoles.push('manager');
+    if (creation.createAdmins) creatableRoles.push('admin');
+    if (creation.createTenantAdmins) creatableRoles.push('tenant_admin');
+
+    return creatableRoles;
+  }
+
+  getTenants() {
+    return this.getDatabase().tenants || [];
+  }
+
+  getTenantById(id: string) {
+    const tenants = this.getDatabase().tenants || [];
+    return tenants.find(t => t.id === id);
+  }
+
+  createTenant(tenant: any) {
+    const db = this.updateDatabase(db => ({
+      ...db,
+      tenants: [...(db.tenants || []), tenant]
+    }));
+    return tenant;
   }
 
   getCampaigns() {

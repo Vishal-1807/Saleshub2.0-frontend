@@ -23,6 +23,7 @@ const titleOptions = [
 ];
 
 export function NameInput({ value, onChange, disabled = false, hasError = false }: NameInputProps) {
+  console.log('🔄 NameInput rendering');
   const handleTitleChange = (title: string) => {
     onChange({ ...value, title });
   };

@@ -385,6 +385,8 @@ function PostcodeAddressInput({
 }
 
 export function CampaignFormView({ campaign, onBack, canSubmit }: CampaignFormViewProps) {
+  console.log('🔄 CampaignFormView rendering');
+
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [phoneValidationStates, setPhoneValidationStates] = useState<FormValidationState>({});
@@ -500,7 +502,7 @@ export function CampaignFormView({ campaign, onBack, canSubmit }: CampaignFormVi
               } else if (formData[field.id] && !phoneValidation.hasBeenValidated) {
                 // Phone number exists but hasn't been validated yet
                 const cleanNumber = formData[field.id].replace(/\D/g, '');
-                if (cleanNumber.length === 10) {
+                if (cleanNumber.length === 11 && /^07\d{9}$/.test(cleanNumber)) {
                   newErrors[field.id] = 'Phone validation required';
                 }
               }
@@ -542,8 +544,10 @@ export function CampaignFormView({ campaign, onBack, canSubmit }: CampaignFormVi
       const displayContent = state?.content !== undefined ? state.content : field.content;
       return (
         <div key={field.id} className="mb-6">
-          {field.label && <h3 className="text-lg font-semibold text-slate-900 mb-2">{field.label}</h3>}
-          <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{displayContent}</p>
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            {field.label && <h4 className="font-semibold text-blue-900 mb-2">{field.label}</h4>}
+            <p className="text-sm text-blue-800 whitespace-pre-wrap">{displayContent}</p>
+          </div>
         </div>
       );
     }

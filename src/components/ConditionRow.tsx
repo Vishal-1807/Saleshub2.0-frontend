@@ -22,6 +22,7 @@ const OPERATORS: { value: FieldOperator; label: string; types: string[] }[] = [
 ];
 
 export function ConditionRow({ condition, fields, onUpdate, onRemove, showRemove }: ConditionRowProps) {
+  console.log('🔄 ConditionRow rendering');
   const selectedField = fields.find((f) => f.id === condition.field);
   const availableOperators = OPERATORS.filter((op) =>
     selectedField ? op.types.includes(selectedField.type) : true

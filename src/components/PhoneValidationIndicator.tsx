@@ -10,10 +10,11 @@ export interface PhoneValidationIndicatorProps {
 /**
  * Component that displays phone validation status with appropriate icons and messages
  */
-export function PhoneValidationIndicator({ 
-  validationState, 
-  className = '' 
+export function PhoneValidationIndicator({
+  validationState,
+  className = ''
 }: PhoneValidationIndicatorProps) {
+  console.log('🔄 PhoneValidationIndicator rendering');
   const { isValid, isValidating, error, hasBeenValidated } = validationState;
 
   // Don't show anything if validation hasn't been attempted
@@ -67,6 +68,7 @@ export function PhoneValidationIndicator({
  * Inline validation icon that appears next to the input field
  */
 export function PhoneValidationIcon({ validationState }: { validationState: ValidationState }) {
+  console.log('🔄 PhoneValidationIcon rendering');
   const { isValid, isValidating, hasBeenValidated } = validationState;
 
   if (isValidating) {
@@ -106,6 +108,7 @@ export function ValidatedPhoneInput({
   placeholder = 'Enter phone number',
   required = false
 }: ValidatedPhoneInputProps) {
+  console.log('🔄 ValidatedPhoneInput rendering');
   // This would use the usePhoneValidation hook
   // For now, we'll create a basic structure that can be enhanced
   

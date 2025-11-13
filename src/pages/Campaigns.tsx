@@ -1,49 +1,147 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAppSelector } from '../store/hooks';
 import { usePermissions } from '../hooks/usePermissions';
 import { sampleUsers } from '../lib/sampleData';
 import { Campaign, FormField } from '../types';
-import { FormFieldConfigurator } from '../components/FormFieldConfigurator';
+
 import { DraggableFormFieldList } from '../components/DraggableFormFieldList';
 import { CampaignFormView } from '../components/CampaignFormView';
 import { CampaignPreviewModal } from '../components/CampaignPreviewModal';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ConditionalLogicBuilder } from '../components/ConditionalLogicBuilder';
 import { AgentAssignmentDrawer } from '../components/AgentAssignmentDrawer';
 import { AgentPills } from '../components/AgentPills';
 import { Rule } from '../types/conditionalLogic';
 import { validateRules } from '../lib/logicEngine';
 import { storageService } from '../services/storage.service';
+
 import {
   Plus,
   Play,
-  Pause,
-  CheckCircle,
   X,
   Calendar,
   Trash2,
-  Briefcase,
   Eye,
   FileText,
   Edit,
   Users,
+  Search,
+  Square,
 } from 'lucide-react';
 
 export default function Campaigns() {
-  const { user } = useAppSelector((state) => state.auth);
-  const { canCreate, isReadOnly, canWrite } = usePermissions();
+  console.log('🔄 Campaigns page rendering');
+
+  const { canCreate, isReadOnly, canWrite, canManageCampaigns } = usePermissions();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
 
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    confirmButtonClass: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    confirmButtonClass: '',
+    onConfirm: () => {},
+  });
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
   useEffect(() => {
+    console.log('🔄 Campaigns useEffect - loading campaigns');
     setCampaigns(storageService.getCampaigns());
   }, []);
+
+  // Filtered campaigns
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter(campaign => {
+      const matchesSearch = !searchTerm ||
+        campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const isOpen = campaign.status === 'active' || !campaign.status;
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'open' && isOpen) ||
+        (statusFilter === 'closed' && !isOpen);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [campaigns, searchTerm, statusFilter]);
 
   const canCreateCampaign = canCreate('campaign_create');
   const campaignsReadOnly = isReadOnly('campaigns');
   const canSubmitForm = canWrite('leads') || canWrite('lead_create');
   const canDeleteCampaign = canWrite('campaigns');
+
+  const showConfirmationModal = (
+    title: string,
+    message: string,
+    confirmText: string,
+    confirmButtonClass: string,
+    onConfirm: () => void
+  ) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText,
+      confirmButtonClass,
+      onConfirm,
+    });
+  };
+
+  const closeConfirmationModal = () => {
+    setConfirmationModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleStartCampaign = (campaignId: string) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      const actionText = campaign.status === 'completed' ? 'restart' : 'start';
+      showConfirmationModal(
+        `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Campaign`,
+        `Are you sure you want to ${actionText} "${campaign.title}"?`,
+        `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Campaign`,
+        'bg-green-600 hover:bg-green-700 text-white',
+        () => {
+          const updatedCampaign = { ...campaign, status: 'active' as const };
+          storageService.updateCampaign(campaignId, updatedCampaign);
+          setCampaigns(storageService.getCampaigns());
+        }
+      );
+    }
+  };
+
+  const handleEndCampaign = (campaignId: string) => {
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      showConfirmationModal(
+        'End Campaign',
+        `Are you sure you want to end "${campaign.title}"? This will close the campaign and stop all activities.`,
+        'End Campaign',
+        'bg-red-600 hover:bg-red-700 text-white',
+        () => {
+          const updatedCampaign = { ...campaign, status: 'completed' as const };
+          storageService.updateCampaign(campaignId, updatedCampaign);
+          setCampaigns(storageService.getCampaigns());
+        }
+      );
+    }
+  };
+
+
 
   if (selectedCampaign) {
     return (
@@ -55,48 +153,10 @@ export default function Campaigns() {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'paused':
-        return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'completed':
-        return 'bg-slate-100 text-slate-700 border-slate-200';
-      default:
-        return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
-  };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return Play;
-      case 'paused':
-        return Pause;
-      case 'completed':
-        return CheckCircle;
-      default:
-        return Play;
-    }
-  };
-
-  const handleDeleteCampaign = (e: React.MouseEvent, campaignId: string) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) {
-      storageService.deleteCampaign(campaignId);
-      setCampaigns(storageService.getCampaigns());
-    }
-  };
-
-  const handleEditCampaign = (e: React.MouseEvent, campaign: Campaign) => {
-    e.stopPropagation();
-    setEditingCampaign(campaign);
-    setShowCreateModal(true);
-  };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {campaignsReadOnly && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
           <Eye className="w-5 h-5 text-amber-600" />
@@ -107,7 +167,8 @@ export default function Campaigns() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Campaigns</h1>
           <p className="text-slate-600 mt-1">Create and manage your lead generation campaigns</p>
@@ -115,93 +176,227 @@ export default function Campaigns() {
         {canCreateCampaign && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-500 hover:to-blue-400 transition-all duration-300 shadow-lg shadow-blue-500/50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg shadow-blue-500/50"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             New Campaign
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => {
-          const StatusIcon = getStatusIcon(campaign.status);
-          return (
-            <div
-              key={campaign.id}
-              onClick={() => {console.log(campaign);setSelectedCampaign(campaign);}}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 cursor-pointer group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{campaign.title}</h3>
-                  <p className="text-sm text-slate-600 line-clamp-2">{campaign.description}</p>
-                </div>
-                {canDeleteCampaign && (
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                    <button
-                      onClick={(e) => handleEditCampaign(e, campaign)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Edit campaign"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteCampaign(e, campaign.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      title="Delete campaign"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>
-                    {new Date(campaign.start_date).toLocaleDateString()} -{' '}
-                    {new Date(campaign.end_date).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold ${getStatusColor(
-                    campaign.status
-                  )}`}
-                >
-                  <StatusIcon className="w-3.5 h-3.5" />
-                  {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                </div>
-                <div className="flex items-center gap-2 text-blue-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                  <FileText className="w-4 h-4" />
-                  View Form
-                </div>
-              </div>
+      {/* Filters */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl p-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search */}
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search campaigns..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-4 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
-          );
-        })}
+          </div>
 
-        {campaigns.length === 0 && (
-          <div className="col-span-full text-center py-12">
-            <Briefcase className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No campaigns yet</h3>
-            <p className="text-slate-600 mb-6">Create your first campaign to start generating leads</p>
-            {user?.role === 'campaign_manager' && (
+          {/* Status Filter */}
+          <div className="min-w-[150px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Campaigns List */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/50 rounded-2xl overflow-hidden">
+        {filteredCampaigns.length === 0 ? (
+          <div className="p-12 text-center">
+            <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No campaigns found</h3>
+            <p className="text-slate-600 mb-6">
+              {searchTerm || statusFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Create your first campaign to get started'
+              }
+            </p>
+            {!searchTerm && statusFilter === 'all' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-500 hover:to-blue-400 transition-all duration-300 shadow-lg shadow-blue-500/50"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 transition-all duration-200 shadow-lg shadow-blue-500/50"
               >
-                <Plus className="w-5 h-5" />
-                Create Campaign
+                <Plus className="w-4 h-4" />
+                Create First Campaign
               </button>
             )}
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50/50 border-b border-slate-200/50">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-700">Campaign</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-700">Status</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-700">Created Date</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-700">Fields</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-slate-700">Agents</th>
+                  <th className="text-right px-6 py-4 text-sm font-medium text-slate-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/50">
+                {filteredCampaigns.map((campaign) => {
+                  const assignedAgentsCount = storageService.getCampaignAssignments()
+                    .filter(a => a.campaign_id === campaign.id).length;
+
+                  return (
+                    <tr
+                      key={campaign.id}
+                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedCampaign(campaign);
+                      }}
+                    >
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="font-medium text-slate-900">{campaign.title}</div>
+                          <div className="text-sm text-slate-600 mt-1">{campaign.description}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {(campaign.status === 'active' || !campaign.status) ? (
+                            <>
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-green-700">Open</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                              <span className="text-sm font-medium text-gray-700">Closed</span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(campaign.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <FileText className="w-4 h-4" />
+                          {campaign.form_fields.length} fields
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Users className="w-4 h-4" />
+                          {assignedAgentsCount} assigned
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Campaign Status Action Buttons - Only show for users with 'manage' or 'full' campaign permissions (Admin+) */}
+                          {canManageCampaigns() && (
+                            <>
+                              {campaign.status === 'active' ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEndCampaign(campaign.id);
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="End Campaign"
+                                >
+                                  <Square className="w-4 h-4" />
+                                </button>
+                              ) : campaign.status === 'completed' ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartCampaign(campaign.id);
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Restart Campaign"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartCampaign(campaign.id);
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Start Campaign"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
+                          )}
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCampaign(campaign);
+                            }}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View Campaign"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {canDeleteCampaign && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingCampaign(campaign);
+                                  setShowCreateModal(true);
+                                }}
+                                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                title="Edit Campaign"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm('Are you sure you want to delete this campaign? This action cannot be undone.')) {
+                                    storageService.deleteCampaign(campaign.id);
+                                    setCampaigns(storageService.getCampaigns());
+                                  }
+                                }}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete Campaign"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+
+
+
 
       {showCreateModal && (
         <CreateCampaignModal
@@ -222,6 +417,16 @@ export default function Campaigns() {
           }}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={closeConfirmationModal}
+        onConfirm={confirmationModal.onConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        confirmText={confirmationModal.confirmText}
+        confirmButtonClass={confirmationModal.confirmButtonClass}
+      />
     </div>
   );
 }
@@ -236,7 +441,7 @@ function CreateCampaignModal({
   onSuccess: (campaign: Campaign, isEdit: boolean) => void;
 }) {
   const { user } = useAppSelector((state) => state.auth);
-  const agents = sampleUsers.filter((u) => u.role === 'field_agent');
+  const agents = sampleUsers.filter((u) => u.role === 'agent');
 
   const getInitialFormData = () => {
     if (editingCampaign) {
@@ -244,18 +449,12 @@ function CreateCampaignModal({
       return {
         title: editingCampaign.title,
         description: editingCampaign.description,
-        start_date: editingCampaign.start_date.split('T')[0],
-        end_date: editingCampaign.end_date.split('T')[0],
-        status: editingCampaign.status,
         custom_message: customMessageField?.content || '',
       };
     }
     return {
       title: '',
       description: '',
-      start_date: new Date().toISOString().split('T')[0],
-      end_date: '',
-      status: 'active' as 'active' | 'paused' | 'completed',
       custom_message: '',
     };
   };
@@ -365,6 +564,7 @@ function CreateCampaignModal({
       form_fields: allFormFields,
       conditional_rules: conditionalRules,
       created_at: new Date().toISOString(),
+      status: 'active', // Default status for new campaigns
     };
 
     setPreviewCampaign(campaignData);
@@ -475,40 +675,7 @@ function CreateCampaignModal({
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="completed">Completed</option>
-              </select>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
-              <input
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
-              <input
-                type="date"
-                value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
           </div>
 
           <div className="border-t border-slate-200 pt-6">

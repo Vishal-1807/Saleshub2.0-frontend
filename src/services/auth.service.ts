@@ -6,6 +6,7 @@ class AuthService {
     const user = storageService.getUserByEmail(email);
 
     if (user && user.password === password) {
+      // Ensure we use the role from the database (which has been updated)
       return {
         id: user.id,
         email: user.email,
@@ -21,7 +22,23 @@ class AuthService {
   async getCurrentUser(): Promise<User | null> {
     const storedUser = localStorage.getItem('leadbyte_current_user');
     if (storedUser) {
-      return JSON.parse(storedUser);
+      const user = JSON.parse(storedUser);
+
+      // Migration: Handle old role names
+      const roleMigration: Record<string, string> = {
+        'campaign_manager': 'manager',
+        'field_agent': 'agent',
+        'call_center_agent': 'agent',
+        'crm_system': 'agent'
+      };
+
+      if (roleMigration[user.role]) {
+        user.role = roleMigration[user.role];
+        // Update localStorage with migrated role
+        localStorage.setItem('leadbyte_current_user', JSON.stringify(user));
+      }
+
+      return user;
     }
     return null;
   }

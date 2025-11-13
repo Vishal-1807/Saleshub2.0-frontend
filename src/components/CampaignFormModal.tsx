@@ -385,6 +385,8 @@ function PostcodeAddressInput({
 }
 
 export function CampaignFormModal({ campaign, onClose, canSubmit }: CampaignFormModalProps) {
+  console.log('🔄 CampaignFormModal rendering');
+
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [phoneValidationStates, setPhoneValidationStates] = useState<FormValidationState>({});
@@ -528,7 +530,7 @@ export function CampaignFormModal({ campaign, onClose, canSubmit }: CampaignForm
             } else if (formData[field.id] && !phoneValidation.hasBeenValidated) {
               // Phone number exists but hasn't been validated yet
               const cleanNumber = formData[field.id].replace(/\D/g, '');
-              if (cleanNumber.length === 10) {
+              if (cleanNumber.length === 11 && /^07\d{9}$/.test(cleanNumber)) {
                 newErrors[field.id] = 'Phone validation required';
               }
             }

@@ -1,18 +1,23 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '../store/hooks';
+import { usePermissions } from '../hooks/usePermissions';
 import { sampleCampaigns, sampleLeads, sampleUsers, sampleCampaignAssignments, sampleActivities } from '../lib/sampleData';
 import { TrendingUp, Users, Briefcase, CheckCircle, Activity, Target, Clock } from 'lucide-react';
 
 export default function Dashboard() {
+  console.log('🔄 Dashboard page rendering');
+
   const { user } = useAppSelector((state) => state.auth);
+  const { canManageOwnLeadsOnly, canManageUsers } = usePermissions();
 
   const stats = useMemo(() => {
-    if (user?.role === 'campaign_manager') {
+    if (!canManageOwnLeadsOnly) {
+      // Manager, Admin, Tenant Admin, or Super Admin - can see all data
       const activeCampaigns = sampleCampaigns.filter((c) => c.status === 'active').length;
       const convertedLeads = sampleLeads.filter((l) => l.status === 'converted').length;
       const contactedLeads = sampleLeads.filter((l) => l.status === 'contacted').length;
       const interestedLeads = sampleLeads.filter((l) => l.status === 'interested').length;
-      const activeAgents = sampleUsers.filter((u) => u.role === 'field_agent').length;
+      const activeAgents = sampleUsers.filter((u) => u.role === 'agent').length;
 
       return {
         totalCampaigns: sampleCampaigns.length,
@@ -24,7 +29,8 @@ export default function Dashboard() {
         interestedLeads,
         assignedLeads: 0,
       };
-    } else if (user?.role === 'field_agent') {
+    } else {
+      // Agent - can only see their own data
       const userLeads = sampleLeads.filter((l) => l.assigned_to === user.id);
       const contactedLeads = userLeads.filter((l) => l.status === 'contacted').length;
       const interestedLeads = userLeads.filter((l) => l.status === 'interested').length;
@@ -41,23 +47,6 @@ export default function Dashboard() {
         interestedLeads,
         assignedLeads: userLeads.length,
       };
-    } else if (user?.role === 'call_center_agent') {
-      const routedLeads = sampleLeads.filter((l) =>
-        ['interested', 'contacted'].includes(l.status)
-      );
-      const completedLeads = sampleLeads.filter((l) => l.status === 'converted').length;
-      const inProgressLeads = routedLeads.filter((l) => l.status === 'interested').length;
-
-      return {
-        totalCampaigns: 0,
-        activeCampaigns: 0,
-        totalLeads: routedLeads.length,
-        convertedLeads: completedLeads,
-        activeAgents: 0,
-        contactedLeads: inProgressLeads,
-        interestedLeads: inProgressLeads,
-        assignedLeads: routedLeads.length,
-      };
     }
 
     return {
@@ -73,7 +62,7 @@ export default function Dashboard() {
   }, [user]);
 
   const sourceData = useMemo(() => {
-    if (user?.role !== 'campaign_manager') return [];
+    if (user?.role === 'agent') return [];
 
     const sourceMap = new Map<string, number>();
     sampleLeads.forEach((l) => {
@@ -89,16 +78,17 @@ export default function Dashboard() {
 
   const getRoleTitle = () => {
     const titles = {
-      campaign_manager: 'Campaign Manager Dashboard',
-      field_agent: 'Field Agent Dashboard',
-      call_center_agent: 'Call Center Dashboard',
-      crm_system: 'CRM System Dashboard',
+      agent: 'Agent Dashboard',
+      manager: 'Manager Dashboard',
+      admin: 'Admin Dashboard',
+      tenant_admin: 'Tenant Admin Dashboard',
+      super_admin: 'Super Admin Dashboard',
     };
     return titles[user!.role];
   };
 
   const getStatCards = () => {
-    if (user?.role === 'campaign_manager') {
+    if (user?.role === 'manager' || user?.role === 'admin' || user?.role === 'tenant_admin' || user?.role === 'super_admin') {
       return [
         {
           label: 'Total Campaigns',
@@ -129,7 +119,7 @@ export default function Dashboard() {
           color: 'from-orange-600 to-orange-500',
         },
       ];
-    } else if (user?.role === 'field_agent') {
+    } else if (user?.role === 'agent') {
       return [
         {
           label: 'Assigned Leads',
@@ -157,68 +147,6 @@ export default function Dashboard() {
           value: stats.convertedLeads,
           change: 'Successfully converted',
           icon: CheckCircle,
-          color: 'from-orange-600 to-orange-500',
-        },
-      ];
-    } else if (user?.role === 'call_center_agent') {
-      return [
-        {
-          label: 'Routed Leads',
-          value: stats.totalLeads,
-          change: 'Assigned to you',
-          icon: Users,
-          color: 'from-blue-600 to-blue-500',
-        },
-        {
-          label: 'In Progress',
-          value: stats.contactedLeads,
-          change: 'Active follow-ups',
-          icon: Clock,
-          color: 'from-emerald-600 to-emerald-500',
-        },
-        {
-          label: 'Completed',
-          value: stats.convertedLeads,
-          change: 'Successfully closed',
-          icon: CheckCircle,
-          color: 'from-purple-600 to-purple-500',
-        },
-        {
-          label: 'Conversion Rate',
-          value: `${stats.totalLeads > 0 ? ((stats.convertedLeads / stats.totalLeads) * 100).toFixed(1) : 0}%`,
-          change: 'Overall success',
-          icon: TrendingUp,
-          color: 'from-orange-600 to-orange-500',
-        },
-      ];
-    } else if (user?.role === 'crm_system') {
-      return [
-        {
-          label: 'Total Campaigns',
-          value: sampleCampaigns.length,
-          change: 'System-wide',
-          icon: Briefcase,
-          color: 'from-blue-600 to-blue-500',
-        },
-        {
-          label: 'Total Leads',
-          value: sampleLeads.length,
-          change: 'All leads',
-          icon: Users,
-          color: 'from-emerald-600 to-emerald-500',
-        },
-        {
-          label: 'Converted',
-          value: sampleLeads.filter((l) => l.status === 'converted').length,
-          change: 'Successful conversions',
-          icon: CheckCircle,
-          color: 'from-purple-600 to-purple-500',
-        },
-        {
-          label: 'Integration Status',
-          value: 'Active',
-          change: 'API connected',
-          icon: Activity,
           color: 'from-orange-600 to-orange-500',
         },
       ];
@@ -257,7 +185,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50">
-          {user?.role === 'campaign_manager' && sourceData.length > 0 ? (
+          {(user?.role === 'manager' || user?.role === 'admin' || user?.role === 'tenant_admin' || user?.role === 'super_admin') && sourceData.length > 0 ? (
             <>
               <h2 className="text-xl font-bold text-slate-900 mb-6">Source Constellation</h2>
               <div className="space-y-4">
@@ -288,7 +216,7 @@ export default function Dashboard() {
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
                   <div className="text-sm text-blue-700 font-medium mb-1">Total Activity</div>
                   <div className="text-3xl font-bold text-blue-900">
-                    {user?.role === 'field_agent' ? stats.assignedLeads : stats.totalLeads}
+                    {user?.role === 'agent' ? stats.assignedLeads : stats.totalLeads}
                   </div>
                   <div className="text-xs text-blue-600 mt-1">Active leads in your pipeline</div>
                 </div>
@@ -334,7 +262,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {user?.role === 'campaign_manager' && (
+      {!canManageOwnLeadsOnly && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50">
             <h2 className="text-xl font-bold text-slate-900 mb-6">Recent Activity</h2>
@@ -384,14 +312,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {(user?.role === 'field_agent' || user?.role === 'call_center_agent' || user?.role === 'crm_system') && (
+      {user?.role === 'agent' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50">
             <h2 className="text-xl font-bold text-slate-900 mb-6">
-              {user?.role === 'field_agent' ? 'My Recent Activity' : 'Recent Activity'}
+              My Recent Activity
             </h2>
             <div className="space-y-4">
-              {user?.role === 'field_agent' ? (
+              {user?.role === 'agent' ? (
                 sampleActivities
                   .filter((a) => a.user_id === user.id)
                   .slice(0, 5)
@@ -434,10 +362,10 @@ export default function Dashboard() {
 
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-slate-200/50">
             <h2 className="text-xl font-bold text-slate-900 mb-6">
-              {user?.role === 'field_agent' ? 'My Campaigns' : 'Active Leads'}
+              My Campaigns
             </h2>
             <div className="space-y-4">
-              {user?.role === 'field_agent' ? (
+              {user?.role === 'agent' ? (
                 sampleCampaignAssignments
                   .filter((a) => a.agent_id === user.id)
                   .map((assignment) => {
@@ -466,10 +394,9 @@ export default function Dashboard() {
       <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-2xl p-6 border border-blue-200/50">
         <h3 className="text-lg font-semibold text-blue-900 mb-2">Welcome back, {user?.full_name}!</h3>
         <p className="text-blue-700">
-          {user?.role === 'campaign_manager' && 'Monitor your campaigns and track team performance from this dashboard. Your conversion rate is looking strong!'}
-          {user?.role === 'field_agent' && 'View your assigned leads and record customer visit outcomes. Keep up the great work!'}
-          {user?.role === 'call_center_agent' && 'Handle routed leads and perform follow-up calls efficiently. You have active leads waiting for follow-up.'}
-          {user?.role === 'crm_system' && 'View system-wide lead data and integration status. All systems are operational.'}
+          {canManageOwnLeadsOnly && 'Create & manage your own leads, view assigned campaigns, and track your personal performance. Keep up the great work!'}
+          {!canManageOwnLeadsOnly && canManageUsers && 'Manage your team, assign agents to campaigns, and access comprehensive reports. Your team performance is looking strong!'}
+          {!canManageOwnLeadsOnly && !canManageUsers && 'Access comprehensive reports and manage system operations. All systems are operational.'}
         </p>
       </div>
     </div>

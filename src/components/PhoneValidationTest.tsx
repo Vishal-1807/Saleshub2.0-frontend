@@ -3,6 +3,7 @@ import { usePhoneValidation } from '../hooks/usePhoneValidation';
 import { PhoneValidationIndicator } from './PhoneValidationIndicator';
 
 export function PhoneValidationTest() {
+  console.log('🔄 PhoneValidationTest rendering');
   const [phoneNumber, setPhoneNumber] = useState('');
   const { validationState, validatePhone, clearValidation, isValidPhone } = usePhoneValidation();
 
@@ -25,14 +26,14 @@ export function PhoneValidationTest() {
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Phone Number (10 digits)
+            Phone Number (11 digits starting with 07)
           </label>
           <div className="relative">
             <input
               type="tel"
               value={phoneNumber}
               onChange={(e) => handleChange(e.target.value)}
-              placeholder="Enter 10-digit phone number"
+              placeholder="Enter UK mobile number (07xxxxxxxxx)"
               className={`w-full px-4 py-2 pr-12 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 validationState.hasBeenValidated && !validationState.isValid 
                   ? 'border-red-500' 
@@ -53,8 +54,8 @@ export function PhoneValidationTest() {
 
         <div className="bg-gray-50 p-3 rounded text-xs">
           <p><strong>Test numbers:</strong></p>
-          <p>• 7480123456 (should be valid in mock mode)</p>
-          <p>• 7123456789 (should be invalid in mock mode)</p>
+          <p>• 07480123456 (should be valid in mock mode)</p>
+          <p>• 07123456789 (should be invalid in mock mode)</p>
         </div>
 
         <button

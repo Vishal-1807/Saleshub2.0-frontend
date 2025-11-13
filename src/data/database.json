@@ -1,49 +1,236 @@
 {
+  "tenants": [
+    {
+      "id": "tenant1",
+      "name": "LeadByte Corp",
+      "created_at": "2024-01-01T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "tenant2",
+      "name": "Sales Pro Inc",
+      "created_at": "2024-01-15T00:00:00Z",
+      "status": "active"
+    }
+  ],
   "users": [
     {
-      "id": "1",
-      "email": "manager@leadbyte.com",
-      "full_name": "Sarah Johnson",
-      "role": "campaign_manager",
-      "password": "demo123"
-    },
-    {
-      "id": "2",
-      "email": "agent1@leadbyte.com",
-      "full_name": "Mike Rodriguez",
-      "role": "field_agent",
-      "password": "demo123"
-    },
-    {
-      "id": "3",
-      "email": "agent2@leadbyte.com",
-      "full_name": "Emily Chen",
-      "role": "field_agent",
-      "password": "demo123"
-    },
-    {
-      "id": "4",
-      "email": "agent3@leadbyte.com",
-      "full_name": "James Wilson",
-      "role": "field_agent",
-      "password": "demo123"
-    },
-    {
-      "id": "5",
-      "email": "callcenter@leadbyte.com",
-      "full_name": "Lisa Anderson",
-      "role": "call_center_agent",
-      "password": "demo123"
+      "id": "super1",
+      "email": "superadmin@saleshub.com",
+      "full_name": "System Administrator",
+      "role": "super_admin",
+      "password": "demo123",
+      "created_at": "2024-01-01T00:00:00Z",
+      "status": "active"
     },
     {
       "id": "6",
-      "email": "crm@leadbyte.com",
-      "full_name": "CRM System",
-      "role": "crm_system",
+      "email": "tenantadmin@leadbyte.com",
+      "full_name": "David Kim",
+      "role": "tenant_admin",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "created_by": "super1",
+      "created_at": "2024-01-02T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "tenant2_admin",
+      "email": "admin@salespro.com",
+      "full_name": "Jennifer Martinez",
+      "role": "tenant_admin",
+      "password": "demo123",
+      "tenant_id": "tenant2",
+      "created_by": "super1",
+      "created_at": "2024-01-15T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "5",
+      "email": "admin@leadbyte.com",
+      "full_name": "Lisa Anderson",
+      "role": "admin",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "6",
+      "created_by": "6",
+      "created_at": "2024-01-03T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "admin2",
+      "email": "admin2@leadbyte.com",
+      "full_name": "Robert Chen",
+      "role": "admin",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "6",
+      "created_by": "6",
+      "created_at": "2024-01-04T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "4",
+      "email": "manager@leadbyte.com",
+      "full_name": "Sarah Johnson",
+      "role": "manager",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "5",
+      "created_by": "5",
+      "created_at": "2024-01-05T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "manager2",
+      "email": "manager2@leadbyte.com",
+      "full_name": "Michael Brown",
+      "role": "manager",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "5",
+      "created_by": "5",
+      "created_at": "2024-01-06T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "manager3",
+      "email": "manager3@leadbyte.com",
+      "full_name": "Amanda Davis",
+      "role": "manager",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "admin2",
+      "created_by": "admin2",
+      "created_at": "2024-01-07T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "1",
+      "email": "agent1@leadbyte.com",
+      "full_name": "Mike Rodriguez",
+      "role": "agent",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "4",
+      "created_by": "4",
+      "created_at": "2024-01-08T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "2",
+      "email": "agent2@leadbyte.com",
+      "full_name": "Emily Chen",
+      "role": "agent",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "4",
+      "created_by": "4",
+      "created_at": "2024-01-09T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "3",
+      "email": "agent3@leadbyte.com",
+      "full_name": "James Wilson",
+      "role": "agent",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "manager2",
+      "created_by": "manager2",
+      "created_at": "2024-01-10T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "agent4",
+      "email": "agent4@leadbyte.com",
+      "full_name": "Jessica Taylor",
+      "role": "agent",
+      "password": "demo123",
+      "tenant_id": "tenant1",
+      "parent_id": "manager3",
+      "created_by": "manager3",
+      "created_at": "2024-01-11T00:00:00Z",
+      "status": "active"
+    },
+    {
+      "id": "7",
+      "email": "superadmin@leadbyte.com",
+      "full_name": "Alex Thompson",
+      "role": "super_admin",
       "password": "demo123"
     }
   ],
-  "campaigns": [],
+  "campaigns": [
+    {
+      "id": "1",
+      "title": "Summer Sales Campaign",
+      "description": "Promote summer products and services to increase Q3 revenue",
+      "status": "active",
+      "start_date": "2024-06-01",
+      "end_date": "2024-08-31",
+      "created_by": "1",
+      "form_fields": [
+        {
+          "id": "1",
+          "label": "Name",
+          "type": "name",
+          "required": true,
+          "permanent": true
+        },
+        {
+          "id": "2",
+          "label": "Email",
+          "type": "email",
+          "required": true,
+          "permanent": true
+        },
+        {
+          "id": "3",
+          "label": "Phone",
+          "type": "phone",
+          "required": true,
+          "permanent": true
+        }
+      ],
+      "conditional_rules": [],
+      "created_at": "2024-05-15T10:00:00Z"
+    },
+    {
+      "id": "2",
+      "title": "Customer Feedback Survey",
+      "description": "Collect customer feedback to improve our services",
+      "status": "active",
+      "start_date": "2024-01-01",
+      "end_date": "2024-12-31",
+      "created_by": "1",
+      "form_fields": [
+        {
+          "id": "1",
+          "label": "Name",
+          "type": "name",
+          "required": true,
+          "permanent": true
+        },
+        {
+          "id": "2",
+          "label": "Email",
+          "type": "email",
+          "required": true,
+          "permanent": true
+        },
+        {
+          "id": "3",
+          "label": "Rating",
+          "type": "number",
+          "required": true,
+          "minValue": 1
+        }
+      ],
+      "conditional_rules": [],
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  ],
   "leads": [],
   "feedback": [],
   "activities": [],

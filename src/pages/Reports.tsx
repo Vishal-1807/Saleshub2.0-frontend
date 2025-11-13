@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
 import { useAppSelector } from '../store/hooks';
+import { usePermissions } from '../hooks/usePermissions';
 import { sampleCampaigns, sampleLeads, sampleUsers, sampleFeedback } from '../lib/sampleData';
 import { TrendingUp, Download, BarChart2, Users, Target, CheckCircle } from 'lucide-react';
 
 export default function Reports() {
+  console.log('🔄 Reports page rendering');
+
   const { user } = useAppSelector((state) => state.auth);
+  const { canManageReports } = usePermissions();
 
   const stats = useMemo(() => {
     const totalLeads = sampleLeads.length;
@@ -31,7 +35,7 @@ export default function Reports() {
     });
 
     const agentStats = sampleUsers
-      .filter((u) => u.role === 'field_agent')
+      .filter((u) => u.role === 'agent')
       .map((agent) => {
         const agentLeads = sampleLeads.filter((l) => l.assigned_to === agent.id);
         const converted = agentLeads.filter((l) => l.status === 'converted').length;
@@ -97,13 +101,13 @@ export default function Reports() {
     alert('Report downloaded successfully!');
   };
 
-  if (user?.role !== 'campaign_manager') {
+  if (!canManageReports) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <BarChart2 className="w-12 h-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Access Restricted</h3>
-          <p className="text-slate-600">Reports are only available to Campaign Managers</p>
+          <p className="text-slate-600">You don't have permission to access full reports</p>
         </div>
       </div>
     );

@@ -59,9 +59,9 @@ export function usePhoneValidation(
       return;
     }
 
-    // Check if we should trigger validation (exactly 10 digits)
+    // Check if we should trigger validation (11 digits starting with 07)
     if (!shouldTriggerPhoneValidation(cleanNumber)) {
-      // Reset validation state if number is not 10 digits
+      // Reset validation state if number is not in UK mobile format
       setValidationState({
         isValid: false,
         isValidating: false,

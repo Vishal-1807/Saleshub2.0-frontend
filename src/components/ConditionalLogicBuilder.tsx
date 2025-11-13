@@ -12,6 +12,7 @@ interface ConditionalLogicBuilderProps {
 }
 
 export function ConditionalLogicBuilder({ rules, fields, onChange }: ConditionalLogicBuilderProps) {
+  console.log('🔄 ConditionalLogicBuilder rendering');
   const [isExpanded, setIsExpanded] = useState(false);
   const [showJson, setShowJson] = useState(false);
 

@@ -36,6 +36,7 @@ export function DraggableFormFieldList({
   onRemoveField,
   fieldTypes,
 }: DraggableFormFieldListProps) {
+  console.log('🔄 DraggableFormFieldList rendering');
   const [activeId, setActiveId] = React.useState<string | null>(null);
   
   const sensors = useSensors(

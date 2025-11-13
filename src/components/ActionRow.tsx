@@ -26,6 +26,7 @@ const ACTION_TYPES: { value: ActionType; label: string }[] = [
 ];
 
 export function ActionRow({ action, fields, onUpdate, onRemove, showRemove }: ActionRowProps) {
+  console.log('🔄 ActionRow rendering');
   const needsValueInput = action.type === 'setValue' || action.type === 'setContent';
   const needsErrorMessageInput = action.type === 'disableSubmit';
   const isAddressFieldAction = action.type === 'disableAddressFields' || action.type === 'enableAddressFields';

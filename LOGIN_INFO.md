@@ -6,35 +6,40 @@ Welcome to the Lead Byte CRM system! This application features role-based access
 
 All demo accounts use the password: `demo123`
 
-### Campaign Manager
-- **Email:** manager@leadbyte.com
-- **Password:** demo123
-- **Access:** Full system access - create campaigns, manage leads, view reports, assign agents
-
-### Field Agent 1
+### Agent 1
 - **Email:** agent1@leadbyte.com
 - **Password:** demo123
-- **Access:** View assigned leads, record visit outcomes, submit feedback
+- **Access:** Create & manage own leads only, view assigned campaigns, basic reporting access for personal performance
 
-### Field Agent 2
+### Agent 2
 - **Email:** agent2@leadbyte.com
 - **Password:** demo123
-- **Access:** View assigned leads, record visit outcomes, submit feedback
+- **Access:** Create & manage own leads only, view assigned campaigns, basic reporting access for personal performance
 
-### Field Agent 3
+### Agent 3
 - **Email:** agent3@leadbyte.com
 - **Password:** demo123
-- **Access:** View assigned leads, record visit outcomes, submit feedback
+- **Access:** Create & manage own leads only, view assigned campaigns, basic reporting access for personal performance
 
-### Call Center Agent
-- **Email:** callcenter@leadbyte.com
+### Manager
+- **Email:** manager@leadbyte.com
 - **Password:** demo123
-- **Access:** View routed leads (interested/contacted), perform follow-ups, update status
+- **Access:** All agent permissions + create/view/edit/update agents, assign agents to campaigns & teams, access lead, team, and login reports
 
-### CRM System (Read-Only)
-- **Email:** crm@leadbyte.com
+### Admin
+- **Email:** admin@leadbyte.com
 - **Password:** demo123
-- **Access:** Read-only view of system data for integration monitoring
+- **Access:** All manager permissions + create/edit/update company, create/edit/update campaigns, toggle HLR check and manual address edit settings, access company & campaign performance reports
+
+### Tenant Admin
+- **Email:** tenantadmin@leadbyte.com
+- **Password:** demo123
+- **Access:** All admin permissions + create/edit/update Admin users
+
+### Super Admin
+- **Email:** superadmin@leadbyte.com
+- **Password:** demo123
+- **Access:** All tenant admin permissions + create/edit/update Tenant Admins
 
 ## Features by Role
 

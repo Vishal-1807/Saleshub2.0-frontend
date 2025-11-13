@@ -16,6 +16,7 @@ export function AgentPills({
   maxDisplay = 5,
   className = '',
 }: AgentPillsProps) {
+  console.log('🔄 AgentPills rendering');
   if (selectedAgents.length === 0) {
     return (
       <div className={`text-sm text-slate-500 ${className}`}>

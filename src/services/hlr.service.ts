@@ -31,8 +31,8 @@ class HLRService {
    * Mock validation for testing when API is not available
    */
   private mockValidation(phoneNumber: string): HLRValidationResult {
-    // Simple mock logic: numbers starting with 7480 are valid, others are invalid
-    const isValid = phoneNumber.startsWith('7480');
+    // Simple mock logic: numbers starting with 07480 are valid, others are invalid
+    const isValid = phoneNumber.startsWith('07480');
 
     return {
       isValid,
@@ -49,7 +49,7 @@ class HLRService {
 
   /**
    * Validates a UK phone number using HLR API
-   * @param phoneNumber - 10-digit UK phone number (without country code)
+   * @param phoneNumber - 11-digit UK mobile number (07 followed by 9 digits)
    * @returns Promise with validation result
    */
   async validatePhoneNumber(phoneNumber: string): Promise<HLRValidationResult> {
@@ -67,7 +67,7 @@ class HLRService {
         return {
           isValid: false,
           isLoading: false,
-          error: 'Phone number must be exactly 10 digits',
+          error: 'Phone number must be 11 digits starting with 07',
           response: null
         };
       }
@@ -79,9 +79,9 @@ class HLRService {
         return this.mockValidation(phoneNumber);
       }
 
-      // Prepend UK country code (44)
-      const fullPhoneNumber = `44${phoneNumber}`;
-      
+      // Use the 11-digit UK number directly (no country code prefix needed)
+      const fullPhoneNumber = phoneNumber;
+
       // Construct API URL
       const url = `${this.baseUrl}?value=${fullPhoneNumber}&key=${this.hlrKey}`;
 
@@ -167,13 +167,13 @@ class HLRService {
   }
 
   /**
-   * Validates phone number format (exactly 10 digits)
+   * Validates phone number format (11 digits starting with 07)
    * @param phoneNumber - Phone number to validate
    * @returns boolean indicating if format is valid
    */
   private isValidPhoneFormat(phoneNumber: string): boolean {
     const cleanNumber = phoneNumber.replace(/\D/g, '');
-    return cleanNumber.length === 10 && /^\d{10}$/.test(cleanNumber);
+    return cleanNumber.length === 11 && /^07\d{9}$/.test(cleanNumber);
   }
 
   /**

@@ -23,8 +23,10 @@ import {
 } from 'lucide-react';
 
 export default function Leads() {
+  console.log('🔄 Leads page rendering');
+
   const { user } = useAppSelector((state) => state.auth);
-  const { canWrite, isReadOnly } = usePermissions();
+  const { canWrite, isReadOnly, canManageOwnLeadsOnly } = usePermissions();
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCampaign, setFilterCampaign] = useState<string>('all');
@@ -39,10 +41,8 @@ export default function Leads() {
   const filteredLeads = useMemo(() => {
     let leads = sampleLeads;
 
-    if (user?.role === 'field_agent') {
+    if (user?.role === 'agent') {
       leads = leads.filter((l) => l.assigned_to === user.id);
-    } else if (user?.role === 'call_center_agent') {
-      leads = leads.filter((l) => ['interested', 'contacted'].includes(l.status));
     }
 
     return leads.filter((lead) => {
@@ -99,10 +99,7 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">
-            {user?.role === 'field_agent' && 'My Leads'}
-            {user?.role === 'call_center_agent' && 'Routed Leads'}
-            {user?.role === 'campaign_manager' && 'All Leads'}
-            {user?.role === 'crm_system' && 'All Leads'}
+            {canManageOwnLeadsOnly ? 'My Leads' : 'All Leads'}
           </h1>
           <p className="text-slate-600 mt-1">
             {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''} found

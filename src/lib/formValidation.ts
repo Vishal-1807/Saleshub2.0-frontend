@@ -141,9 +141,10 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
- * Checks if a phone number has exactly 10 digits
+ * Checks if a phone number matches UK mobile format (07 followed by 9 digits)
  */
 export function shouldTriggerPhoneValidation(phoneNumber: string): boolean {
   const cleanNumber = phoneNumber.replace(/\D/g, '');
-  return cleanNumber.length === 10;
+  // Check for UK mobile format: 07 followed by 9 digits (11 digits total)
+  return cleanNumber.length === 11 && /^07\d{9}$/.test(cleanNumber);
 }

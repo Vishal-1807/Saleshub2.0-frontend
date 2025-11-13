@@ -6,15 +6,19 @@ import Dashboard from './pages/Dashboard';
 import Campaigns from './pages/Campaigns';
 import Leads from './pages/Leads';
 import Reports from './pages/Reports';
+import UserManagement from './pages/UserManagement';
 import Layout from './components/Layout';
 
 function App() {
+  console.log('🔄 App component rendering');
+
   const dispatch = useAppDispatch();
   const { user, isLoading, isAuthenticated } = useAppSelector((state) => state.auth);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 App useEffect - checking auth');
     dispatch(checkAuth()).finally(() => setInitializing(false));
   }, [dispatch]);
 
@@ -31,6 +35,7 @@ function App() {
   }
 
   const renderPage = () => {
+    console.log('🔄 App renderPage - currentPage:', currentPage);
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
@@ -38,6 +43,9 @@ function App() {
         return <Campaigns />;
       case 'leads':
         return <Leads />;
+      case 'user-management':
+      case 'my-team':
+        return <UserManagement />;
       case 'reports':
         return <Reports />;
       default:

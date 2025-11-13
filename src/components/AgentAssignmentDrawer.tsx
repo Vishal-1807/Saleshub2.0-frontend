@@ -17,6 +17,7 @@ export function AgentAssignmentDrawer({
   selectedAgents,
   onSelectionChange,
 }: AgentAssignmentDrawerProps) {
+  console.log('🔄 AgentAssignmentDrawer rendering');
   const [searchQuery, setSearchQuery] = useState('');
   const [tempSelectedAgents, setTempSelectedAgents] = useState<string[]>(selectedAgents);
   const drawerRef = useRef<HTMLDivElement>(null);
